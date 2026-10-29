@@ -154,6 +154,29 @@ If you prefer not to install:
 1. Navigate to the `release/win-unpacked/` folder.
 2. Run **`sourceclip.exe`** directly.
 
+> [!IMPORTANT]
+> ### 🛡️ First-Time Launch: Windows SmartScreen ("More info" -> "Run anyway")
+> When you or someone else downloads and runs SourceClip on Windows for the first time, Microsoft Defender SmartScreen may display a blue protection dialog:
+>
+> ```
+> Windows protected your PC
+> Microsoft Defender SmartScreen prevented an unrecognized app from starting.
+> ```
+>
+> **To start SourceClip:**
+> 1. Click **"More info"** (the underlined text beneath the message)
+> 2. Click the **"Run anyway"** button that appears at the bottom
+>
+> **Why does Windows show this?**  
+> SourceClip is a 100% free, transparent open-source utility. Windows SmartScreen displays this prompt for any newly released executable that is not signed with an expensive corporate digital certificate ($300–$500/year). SourceClip contains **zero malware, zero adware, and zero telemetry**, and the complete source code is public for anyone to inspect right here on GitHub.
+>
+> ---
+> **සිංහල උපදෙස් (Sinhala Guide):**  
+> ඔබ හෝ වෙනත් අයෙකු මෙම ඇප් එක GitHub වෙතින් Download කර මුලින්ම Open කිරීමේදී Windows මඟින් *"Windows protected your PC"* යනුවෙන් නිල් පැහැති SmartScreen පණිවිඩයක් පැමිණියහොත්:  
+> 1. එහි ඇති **"More info"** ලින්ක් එක ක්ලික් කරන්න.  
+> 2. ඉන්පසු පහළින් මතුවන **"Run anyway"** බොත්තම ක්ලික් කර ඇප් එක විවෘත කරගන්න.  
+> *(මෙය මිල අධික වාණිජ Code-Signing සහතිකයක් නොමැති ඕනෑම නව Open-Source මෘදුකාංගයකට Windows ආරක්ෂක පද්ධතිය මඟින් සාමාන්‍යයෙන් පෙන්වන දැනුම්දීමක් පමණක් වන අතර, SourceClip පරිගණකයට 100% ක් ආරක්ෂිත වේ.)*
+
 ---
 
 ## 📱 How to Use SourceClip Bridge
@@ -322,17 +345,22 @@ sourceclip/
 ## ❓ Frequently Asked Questions (FAQ)
 
 <details>
-<summary><b>1. Do I need to install an app on my Android phone?</b></summary>
+<summary><b>1. Why does Windows SmartScreen show "Windows protected your PC"?</b></summary>
+<p>Windows Defender SmartScreen shows this prompt on freshly downloaded executable files from the internet if they are not signed with a paid commercial certificate ($300+/year). To run SourceClip, simply click <b>"More info"</b> and then <b>"Run anyway"</b>. SourceClip is 100% open-source, completely clean, and contains no telemetry or malware.</p>
+</details>
+
+<details>
+<summary><b>2. Do I need to install an app on my Android phone?</b></summary>
 <p>No! SourceClip Bridge serves a lightweight, mobile-optimized Web App directly from your PC to your phone's browser. There are no APKs to install and no permissions to grant.</p>
 </details>
 
 <details>
-<summary><b>2. Does SourceClip send any of my clipboard data to the cloud?</b></summary>
+<summary><b>3. Does SourceClip send any of my clipboard data to the cloud?</b></summary>
 <p>Never. SourceClip is 100% offline-capable and privacy-first. Your clipboard history is saved exclusively in a local SQLite database in your Windows profile (<code>%APPDATA%\sourceclip\clipboard.db</code>). Phone sharing communicates strictly across your local Wi-Fi router.</p>
 </details>
 
 <details>
-<summary><b>3. Why can't my phone connect to my PC after scanning the QR code?</b></summary>
+<summary><b>4. Why can't my phone connect to my PC after scanning the QR code?</b></summary>
 <p>Ensure that:
 <ol>
   <li>Both your PC and phone are connected to the <b>same Wi-Fi router</b> (or your phone's portable hotspot).</li>
@@ -344,12 +372,12 @@ sourceclip/
 </details>
 
 <details>
-<summary><b>4. How do I switch languages?</b></summary>
+<summary><b>5. How do I switch languages?</b></summary>
 <p>Click the <b>EN / සිං</b> toggle pill in the top header. The interface will switch immediately between English and Sinhala (සිංහල).</p>
 </details>
 
 <details>
-<summary><b>5. How long is my clipboard history kept?</b></summary>
+<summary><b>6. How long is my clipboard history kept?</b></summary>
 <p>Pinned items are saved permanently until you explicitly unpin or delete them. Unpinned items older than 7 days are automatically pruned when SourceClip starts up to keep your database fast and clean.</p>
 </details>
 
