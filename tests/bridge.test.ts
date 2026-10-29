@@ -137,13 +137,59 @@ async function runTests() {
     }, { text: '   ' });
     assert(emptyRes.status === 400, 'Whitespace/empty text rejected with HTTP 400');
 
-    // 9. Unpair / Disconnect Flow
-    console.log('\n[Test 9] Disconnect & Session Invalidation:');
+    // 9. PC-to-Phone Sharing (Bidirectional Bridge)
+    console.log('\n[Test 9] PC-to-Phone Sharing (Send from Desktop to Mobile):');
+    const pcSendRes = bridge.sendToDevice('https://github.com/SithumH/sourceclip - Awesome project!');
+    assert(pcSendRes.success === true, 'PC sent message successfully to paired phone');
+    assert(Boolean(pcSendRes.id), 'PC message ID generated');
+
+    // Phone polls GET /api/messages with Bearer token
+    const phoneMessagesRes = await request({
+      hostname: host, port, path: '/api/messages', method: 'GET',
+      headers: { 'Authorization': `Bearer ${activeToken}` }
+    });
+    assert(phoneMessagesRes.status === 200, 'Phone can fetch outgoing messages via GET /api/messages');
+    assert(Array.isArray(phoneMessagesRes.body.messages) && phoneMessagesRes.body.messages.length > 0, 'Messages list returned to phone');
+    assert(phoneMessagesRes.body.messages[0].text.includes('sourceclip'), 'Phone received exact message text');
+
+    // Phone polls GET /api/status and receives messages
+    const statusWithMessages = await request({
+      hostname: host, port, path: '/api/status', method: 'GET',
+      headers: { 'Authorization': `Bearer ${activeToken}` }
+    });
+    assert(statusWithMessages.status === 200 && Array.isArray(statusWithMessages.body.messages), 'GET /api/status delivers messages seamlessly');
+
+    // 10. Security: Unauthorized access to /api/messages
+    console.log('\n[Test 10] Security: Reject Unauthorized Access to /api/messages:');
+    const unauthMessages = await request({
+      hostname: host, port, path: '/api/messages', method: 'GET'
+    });
+    assert(unauthMessages.status === 401, 'Unauthorized /api/messages rejected with HTTP 401');
+
+    // 11. Clear Outgoing Messages
+    console.log('\n[Test 11] Clear Outgoing Messages:');
+    const clearRes = await request({
+      hostname: host, port, path: '/api/messages/clear', method: 'POST',
+      headers: { 'Authorization': `Bearer ${activeToken}` }
+    });
+    assert(clearRes.status === 200 && clearRes.body.success === true, 'Messages cleared via API');
+    const emptyMessages = await request({
+      hostname: host, port, path: '/api/messages', method: 'GET',
+      headers: { 'Authorization': `Bearer ${activeToken}` }
+    });
+    assert(emptyMessages.body.messages.length === 0, 'Message queue is empty after clear');
+
+    // 12. Unpair / Disconnect Flow
+    console.log('\n[Test 12] Disconnect & Session Invalidation:');
     const unpairRes = await request({
       hostname: host, port, path: '/api/unpair', method: 'POST',
       headers: { 'Authorization': `Bearer ${activeToken}` }
     });
     assert(unpairRes.status === 200, 'Unpair API returned HTTP 200');
+
+    // PC cannot send when unpaired
+    const sendAfterDisconnect = bridge.sendToDevice('Cannot send after unpair');
+    assert(sendAfterDisconnect.success === false, 'PC cannot send to phone after device is unpaired');
 
     const sendAfterUnpair = await request({
       hostname: host, port, path: '/api/send', method: 'POST',

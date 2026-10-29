@@ -40,7 +40,10 @@ const translations = {
     approve: "Approve Pairing",
     reject: "Reject",
     verificationPin: "PIN",
-    receivedSnippet: "Received text snippet from Phone"
+    receivedSnippet: "Received text snippet from Phone",
+    sendToPhone: "Send to Phone",
+    sentToPhone: "Sent to Phone!",
+    noPhoneConnected: "No phone connected to Bridge. Open Bridge to pair."
   },
   si: {
     title: "SourceClip",
@@ -72,7 +75,10 @@ const translations = {
     approve: "අනුමත කරන්න",
     reject: "ප්‍රතික්ෂේප කරන්න",
     verificationPin: "PIN අංකය",
-    receivedSnippet: "දුරකථනයෙන් නව සටහනක් ලැබුණි"
+    receivedSnippet: "දුරකථනයෙන් නව සටහනක් ලැබුණි",
+    sendToPhone: "දුරකථනයට යවන්න",
+    sentToPhone: "දුරකථනයට යැව්වා!",
+    noPhoneConnected: "Bridge සමඟ දුරකථනයක් සම්බන්ධ වී නැත. බ්‍රිජ් විවෘත කරන්න."
   }
 };
 
@@ -123,6 +129,13 @@ const Icons = {
       <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
     </svg>
   ),
+  PhoneSend: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+      <line x1="12" y1="18" x2="12.01" y2="18"></line>
+      <path d="M12 6l3 3m0 0l-3 3m3-3H9"></path>
+    </svg>
+  ),
   InboxEmpty: () => (
     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 12h-6l-2 3h-4l-2-3H2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-7z"></path>
@@ -168,6 +181,8 @@ function App() {
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [modalCopied, setModalCopied] = useState(false);
+  const [sentPhoneId, setSentPhoneId] = useState<number | null>(null);
+  const [modalSentPhone, setModalSentPhone] = useState(false);
 
   // SourceClip Bridge states
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
@@ -313,6 +328,38 @@ function App() {
     if (selectedItem?.id === id) {
       setSelectedItem({ ...selectedItem, is_pinned: newStatus });
     }
+  };
+
+  const handleSendToPhone = async (id: number | null, text: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!bridgeStatus?.connectedDevice) {
+      setBridgeToast({ text: t.noPhoneConnected });
+      setTimeout(() => setBridgeToast(null), 3500);
+      return { success: false, error: 'No phone connected' };
+    }
+
+    // @ts-ignore
+    if (window.api?.sendToPhone) {
+      // @ts-ignore
+      const res = await window.api.sendToPhone(text);
+      if (res?.success) {
+        if (id !== null) {
+          setSentPhoneId(id);
+          setTimeout(() => setSentPhoneId((prev) => (prev === id ? null : prev)), 1400);
+        } else {
+          setModalSentPhone(true);
+          setTimeout(() => setModalSentPhone(false), 1400);
+        }
+        setBridgeToast({ text: t.sentToPhone });
+        setTimeout(() => setBridgeToast(null), 3000);
+        return { success: true };
+      } else {
+        setBridgeToast({ text: res?.error || 'Failed to send' });
+        setTimeout(() => setBridgeToast(null), 3000);
+        return { success: false, error: res?.error };
+      }
+    }
+    return { success: false, error: 'API unavailable' };
   };
 
   // Bridge control actions
@@ -800,6 +847,21 @@ function App() {
                         )}
                       </button>
 
+                      {/* Send to Phone */}
+                      <button
+                        onClick={(e) => handleSendToPhone(item.id, item.text, e)}
+                        className="action-btn action-btn-icon"
+                        title={t.sendToPhone}
+                        style={{
+                          color: sentPhoneId === item.id ? 'var(--success)' : (bridgeStatus?.connectedDevice ? '#2563eb' : 'var(--text-muted)'),
+                          backgroundColor: sentPhoneId === item.id ? 'var(--success-light)' : (bridgeStatus?.connectedDevice ? '#eff6ff' : 'var(--bg-subtle)'),
+                          borderColor: sentPhoneId === item.id ? '#bbf7d0' : (bridgeStatus?.connectedDevice ? '#dbeafe' : 'transparent'),
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {sentPhoneId === item.id ? <Icons.Check /> : <Icons.PhoneSend />}
+                      </button>
+
                       {/* Delete */}
                       <button
                         onClick={(e) => handleDelete(item.id, e)}
@@ -854,6 +916,7 @@ function App() {
         onSetIp={handleSetBridgeIp}
         onUnpair={handleUnpairBridge}
         onRegeneratePin={handleRegeneratePin}
+        onSendToPhone={(text) => handleSendToPhone(null, text)}
         lang={lang}
       />
 
@@ -1067,6 +1130,29 @@ function App() {
                       <span>{t.copyBtn}</span>
                     </>
                   )}
+                </button>
+
+                {/* Send to Phone from Modal */}
+                <button
+                  onClick={() => handleSendToPhone(null, selectedItem.text)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: modalSentPhone ? 'var(--success)' : (bridgeStatus?.connectedDevice ? '#eff6ff' : 'var(--bg-subtle)'),
+                    color: modalSentPhone ? '#ffffff' : (bridgeStatus?.connectedDevice ? '#2563eb' : 'var(--text-secondary)'),
+                    border: `1px solid ${bridgeStatus?.connectedDevice ? '#bfdbfe' : 'var(--border-light)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    fontSize: '12px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title={t.sendToPhone}
+                >
+                  {modalSentPhone ? <Icons.Check /> : <Icons.PhoneSend />}
+                  <span>{modalSentPhone ? t.sentToPhone : t.sendToPhone}</span>
                 </button>
 
                 <button

@@ -1,8 +1,8 @@
 # SourceClip 📋
 
-> **Lightweight, Privacy-First Clipboard Manager & Same-Wi-Fi Phone-to-PC Bridge for Windows**
+> **Lightweight, Privacy-First Clipboard Manager & Same-Wi-Fi Bidirectional Phone-PC Bridge for Windows**
 
-SourceClip is an open-source, minimalist Windows desktop application designed to capture your clipboard history locally, preserve pinned favorites, and seamlessly share text and links from any Android phone to your PC over your local Wi-Fi network without cloud accounts or third-party servers.
+SourceClip is an open-source, minimalist Windows desktop application designed to capture your clipboard history locally, preserve pinned favorites, and seamlessly share text and links bidirectionally between your PC and Android phone over your local Wi-Fi network without cloud accounts or third-party servers.
 
 ---
 
@@ -18,11 +18,14 @@ SourceClip is an open-source, minimalist Windows desktop application designed to
 - **Bilingual Interface**: Full native support for **English** and **Sinhala (සිංහල)**.
 - **100% Local Persistence**: Uses SQLite WAL mode stored in your Windows user profile (`%APPDATA%\sourceclip`).
 
-### 2. 📱 SourceClip Bridge (Phone-to-PC Sharing)
+### 2. 📱 SourceClip Bridge (Bidirectional PC ⇄ Phone Sharing)
 - **Zero-Install Phone Client**: No Android APK required! Simply scan the desktop QR code using your phone's camera or mobile browser (Chrome/Firefox/Samsung Internet).
-- **Same-Wi-Fi Local Transfer**: Send links, notes, OTPs, or text directly from your phone to your PC.
+- **Two-Way Local Transfer**:
+  - **Phone to PC**: Send links, notes, OTPs, or text directly from phone to PC clipboard.
+  - **PC to Phone**: Send any clipboard snippet or custom text directly from desktop to phone with one click!
+- **Mobile Feed & Quick Copy**: Phone browser displays received items in real time with one-tap "Copy to Clipboard" and "Open Link ↗" buttons.
 - **Explicit Pairing & Security**: Each session generates a unique cryptographic token and a 6-digit PIN. Transfers are **blocked** until you click **Approve** on your desktop.
-- **Item Attribution**: Content received from your phone is tagged with a distinct `📱 Phone` badge in your history.
+- **Item Attribution**: Content received from your phone is tagged with a distinct `📱 Phone` badge in your desktop history.
 - **Strict Size Limits & Rate Limiting**: Up to 64 KB per payload with protection against local network flooding.
 - **No Cloud, No Telemetry**: All traffic remains inside your local Wi-Fi network.
 
@@ -56,7 +59,7 @@ npm install
 # Run Vite development server
 npm run dev
 
-# Run automated Bridge integration test suite (17 tests)
+# Run automated Bridge integration test suite (27 tests)
 npm test
 
 # Build production bundle and Windows NSIS installer
@@ -72,8 +75,8 @@ npm run build
 3. Click **"Turn On"** to start the local Bridge server.
 4. Scan the displayed **QR Code** using your phone camera or mobile browser.
 5. On your PC, a **"Phone Pairing Request"** prompt will appear showing the device name, IP, and PIN. Click **"Approve"**.
-6. On your phone, type or paste any text/link and tap **"🚀 Send to PC"**.
-7. The snippet appears immediately in your desktop clipboard history ready to copy!
+6. **To send from Phone to PC**: Type or paste any text/link on your phone and tap **"🚀 Send to PC"**. It appears immediately in desktop SourceClip!
+7. **To send from PC to Phone**: Click the **📱 Send to Phone** icon on any snippet card, inside the snippet detail modal, or type directly in the Bridge modal. The text appears instantly in your phone's browser feed with a 1-tap Copy button!
 
 ---
 

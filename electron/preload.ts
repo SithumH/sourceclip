@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('api', {
   rejectBridgePairing: (requestId: string) => ipcRenderer.invoke('bridge-reject-pairing', requestId),
   unpairBridgeDevice: () => ipcRenderer.invoke('bridge-unpair'),
   regenerateBridgePin: () => ipcRenderer.invoke('bridge-regenerate-pin'),
+  sendToPhone: (text: string) => ipcRenderer.invoke('bridge-send-to-phone', text),
 
   onBridgeStatusChange: (callback: (status: any) => void) => {
     ipcRenderer.on('bridge-status-changed', (_, status) => callback(status));

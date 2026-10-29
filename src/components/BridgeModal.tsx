@@ -31,13 +31,14 @@ interface BridgeModalProps {
   onSetIp: (ip: string) => void;
   onUnpair: () => void;
   onRegeneratePin: () => void;
+  onSendToPhone?: (text: string) => Promise<{ success: boolean; error?: string }>;
   lang: 'en' | 'si';
 }
 
 const translations = {
   en: {
     title: "SourceClip Bridge",
-    subtitle: "Share text and links from Android phone to PC over local Wi-Fi",
+    subtitle: "Share text and links between PC and Android phone over local Wi-Fi",
     enableBridge: "Enable Bridge",
     runningStatus: "Bridge is active",
     stoppedStatus: "Bridge is off",
@@ -52,6 +53,11 @@ const translations = {
     connectedDevice: "Connected Phone",
     disconnectBtn: "Disconnect Phone",
     noDeviceConnected: "No device connected yet. Waiting for scan...",
+    quickSendTitle: "Send Text or Link to Phone",
+    quickSendPlaceholder: "Type or paste text/link to send directly to your phone...",
+    sendBtn: "Send to Phone",
+    sendingBtn: "Sending...",
+    sentSuccess: "Sent to Phone!",
     helpTitle: "Wi-Fi Connection Tips & Troubleshooting",
     help1: "Both your PC and phone must be on the same local Wi-Fi router.",
     help2: "Ensure 'AP Client Isolation' is disabled in your router settings.",
@@ -61,7 +67,7 @@ const translations = {
   },
   si: {
     title: "SourceClip බ්‍රිජ් (Bridge)",
-    subtitle: "දුරකථනයේ සිට PC එකට Wi-Fi හරහා සටහන් සහ links එවන්න",
+    subtitle: "පරිගණකය සහ දුරකථනය අතර Wi-Fi හරහා සටහන් සහ links හුවමාරු කරන්න",
     enableBridge: "බ්‍රිජ් සක්‍රිය කරන්න",
     runningStatus: "බ්‍රිජ් ක්‍රියාත්මකයි",
     stoppedStatus: "බ්‍රිජ් අක්‍රියයි",
@@ -76,6 +82,11 @@ const translations = {
     connectedDevice: "සම්බන්ධිත දුරකථනය",
     disconnectBtn: "දුරකථනය විසන්ධි කරන්න",
     noDeviceConnected: "තවමත් දුරකථනයක් සම්බන්ධ වී නැත. ස්කෑන් කරන තෙක් රැඳී සිටින්න...",
+    quickSendTitle: "දුරකථනයට කෙලින්ම සටහන් යවන්න",
+    quickSendPlaceholder: "දුරකථනයට යැවීමට මෙහි ඕනෑම දෙයක් ලියන්න හෝ paste කරන්න...",
+    sendBtn: "දුරකථනයට යවන්න",
+    sendingBtn: "යවමින්...",
+    sentSuccess: "දුරකථනයට යැවුණි!",
     helpTitle: "Wi-Fi සම්බන්ධතා උපදෙස් සහ ගැටළු නිරාකරණය",
     help1: "පරිගණකය සහ දුරකථනය එකම Wi-Fi රවුටරයට සම්බන්ධ වී තිබිය යුතුය.",
     help2: "රවුටර සැකසුම්වල 'AP Client Isolation' අක්‍රිය කර ඇත්දැයි බලන්න.",
@@ -94,10 +105,14 @@ export function BridgeModal({
   onSetIp,
   onUnpair,
   onRegeneratePin,
+  onSendToPhone,
   lang
 }: BridgeModalProps) {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [sendText, setSendText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
 
   const t = translations[lang];
   const isRunning = status?.isRunning ?? false;
@@ -120,6 +135,21 @@ export function BridgeModal({
       navigator.clipboard.writeText(status.pairingUrl);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 1500);
+    }
+  };
+
+  const handleDirectSend = async () => {
+    if (!sendText.trim() || isSending || !onSendToPhone) return;
+    setIsSending(true);
+    try {
+      const res = await onSendToPhone(sendText.trim());
+      if (res && res.success) {
+        setSendText('');
+        setSendSuccess(true);
+        setTimeout(() => setSendSuccess(false), 2000);
+      }
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -367,6 +397,66 @@ export function BridgeModal({
                   </button>
                 )}
               </div>
+
+              {/* Direct Send to Connected Phone */}
+              {status?.connectedDevice && (
+                <div style={{
+                  padding: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-light)',
+                  marginBottom: '14px'
+                }}>
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    marginBottom: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>📱 {t.quickSendTitle}</span>
+                  </div>
+                  <textarea
+                    value={sendText}
+                    onChange={(e) => setSendText(e.target.value)}
+                    placeholder={t.quickSendPlaceholder}
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-light)',
+                      fontSize: '12px',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      resize: 'vertical',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                    <button
+                      onClick={handleDirectSend}
+                      disabled={!sendText.trim() || isSending}
+                      style={{
+                        padding: '5px 12px',
+                        backgroundColor: sendSuccess ? 'var(--success)' : 'var(--primary)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: (!sendText.trim() || isSending) ? 'not-allowed' : 'pointer',
+                        opacity: (!sendText.trim() || isSending) ? 0.6 : 1,
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {isSending ? t.sendingBtn : (sendSuccess ? `✓ ${t.sentSuccess}` : `🚀 ${t.sendBtn}`)}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

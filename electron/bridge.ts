@@ -16,6 +16,12 @@ export interface PairingRequest {
   timestamp: number;
 }
 
+export interface BridgeMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+}
+
 export interface BridgeStatus {
   isRunning: boolean;
   port: number;
@@ -29,6 +35,7 @@ export interface BridgeStatus {
     pairedAt: number;
   } | null;
   pendingRequest: PairingRequest | null;
+  outgoingCount: number;
 }
 
 // Mobile Web Client HTML/CSS/JS (Served from Bridge Server to phone browser)
@@ -55,7 +62,7 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       padding-bottom: 12px;
       border-bottom: 1px solid #e2e8f0;
     }
@@ -98,10 +105,13 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
       font-weight: 600;
       margin-bottom: 8px;
       color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     textarea {
       width: 100%;
-      height: 140px;
+      height: 110px;
       padding: 12px;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
@@ -118,13 +128,13 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
     .btn-group {
       display: flex;
       gap: 8px;
-      margin-top: 12px;
+      margin-top: 10px;
     }
     button {
       flex: 1;
-      padding: 12px 16px;
+      padding: 11px 14px;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 600;
       cursor: pointer;
       border: none;
@@ -192,6 +202,89 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
       border-radius: 8px;
       margin: 12px 0;
     }
+    .badge-count {
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .msg-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .msg-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      transition: all 0.15s;
+    }
+    .msg-card:hover {
+      border-color: #cbd5e1;
+    }
+    .msg-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      color: #0f172a;
+      line-height: 1.45;
+      margin-bottom: 8px;
+      user-select: text;
+    }
+    .msg-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 6px;
+      border-top: 1px solid #edf2f7;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .msg-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-micro {
+      flex: 0 0 auto;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
+    }
+    .btn-micro:active {
+      background: #f1f5f9;
+    }
+    .btn-micro.btn-micro-copied {
+      background: #dcfce7;
+      color: #15803d;
+      border-color: #86efac;
+    }
+    .btn-micro-link {
+      background: #eff6ff;
+      color: #2563eb;
+      border-color: #bfdbfe;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 20px 12px;
+      color: #94a3b8;
+      font-size: 12px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -208,24 +301,41 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
   <!-- Waiting Approval Screen -->
   <div id="approvalScreen" class="card" style="display: none; text-align: center;">
     <div style="font-size: 32px; margin-bottom: 8px;">⏳</div>
-    <div class="card-title" style="font-size: 16px;">Waiting for PC Approval</div>
+    <div class="card-title" style="font-size: 16px; justify-content: center;">Waiting for PC Approval</div>
     <p class="notice">Look at your PC screen and verify the matching code:</p>
     <div id="pinBox" class="pin-display">------</div>
     <p class="notice">Click "Approve" on your SourceClip desktop app to complete pairing.</p>
   </div>
 
-  <!-- Transfer Screen -->
+  <!-- Transfer Screen (Bidirectional) -->
   <div id="transferScreen" style="display: none;">
+    <!-- 1. Send to PC -->
     <div class="card">
-      <div class="card-title">Share Text or Link to PC</div>
+      <div class="card-title">
+        <span>🚀 Share to PC</span>
+      </div>
       <textarea id="clipText" placeholder="Type or paste any text, link, code snippet, or notes to send to your PC clipboard..."></textarea>
       <div class="btn-group">
         <button id="pasteBtn" class="btn-secondary" type="button">📋 Paste</button>
         <button id="sendBtn" class="btn-primary" type="button">🚀 Send to PC</button>
       </div>
-      <p class="notice">Transferred over local Wi-Fi. Content is directly saved in SourceClip desktop clipboard.</p>
+      <p class="notice">Transferred over local Wi-Fi. Content is saved directly in desktop SourceClip.</p>
     </div>
 
+    <!-- 2. Received from PC -->
+    <div class="card">
+      <div class="card-title">
+        <span>📥 Received from PC</span>
+        <span id="msgCountBadge" class="badge-count">0 items</span>
+      </div>
+      <div id="msgContainer" class="msg-list">
+        <div id="emptyMsgState" class="empty-state">
+          No items received from PC yet.<br>Click "Send to Phone" on your PC to view text here.
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection Info & Disconnect -->
     <div class="card" style="padding: 12px 16px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 12px; color: #64748b;">Connected to SourceClip PC</span>
@@ -237,7 +347,7 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
   <!-- Rejected / Disconnected Screen -->
   <div id="errorScreen" class="card" style="display: none; text-align: center;">
     <div style="font-size: 32px; margin-bottom: 8px;">⚠️</div>
-    <div id="errorTitle" class="card-title" style="font-size: 16px;">Disconnected</div>
+    <div id="errorTitle" class="card-title" style="font-size: 16px; justify-content: center;">Disconnected</div>
     <p id="errorMsg" class="notice">The connection was ended or rejected by the desktop app.</p>
     <button id="reconnectBtn" class="btn-primary" style="margin-top: 14px;" type="button">Scan Again</button>
   </div>
@@ -249,6 +359,8 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
     const initialToken = urlParams.get('token') || '';
     let sessionToken = localStorage.getItem('sourceclip_session_token') || '';
     let pollingInterval = null;
+    let receivedMessages = [];
+    let lastMsgCount = 0;
 
     const statusBadge = document.getElementById('statusBadge');
     const statusText = document.getElementById('statusText');
@@ -274,6 +386,99 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
       statusText.textContent = text;
     }
 
+    function escapeHtml(str) {
+      const p = document.createElement('p');
+      p.textContent = str;
+      return p.innerHTML;
+    }
+
+    function isUrl(str) {
+      try {
+        const s = str.trim();
+        if (!s.startsWith('http://') && !s.startsWith('https://')) return false;
+        new URL(s);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function formatRelative(ts) {
+      const diff = Math.floor((Date.now() - ts) / 1000);
+      if (diff < 10) return 'Just now';
+      if (diff < 60) return diff + 's ago';
+      const min = Math.floor(diff / 60);
+      if (min < 60) return min + 'm ago';
+      const hr = Math.floor(min / 60);
+      return hr + 'h ago';
+    }
+
+    async function copyMessageText(idx, btn) {
+      const item = receivedMessages[idx];
+      if (!item) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(item.text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = item.text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        const origText = btn.innerHTML;
+        btn.innerHTML = '✓ Copied!';
+        btn.classList.add('btn-micro-copied');
+        setTimeout(() => {
+          btn.innerHTML = origText;
+          btn.classList.remove('btn-micro-copied');
+        }, 1500);
+        showToast('Copied to phone clipboard!', 'success');
+      } catch (err) {
+        showToast('Could not copy automatically. Long-press text to copy.', 'error');
+      }
+    }
+
+    function renderMessages(messages) {
+      receivedMessages = messages || [];
+      const container = document.getElementById('msgContainer');
+      const badge = document.getElementById('msgCountBadge');
+      
+      badge.textContent = receivedMessages.length + (receivedMessages.length === 1 ? ' item' : ' items');
+
+      if (receivedMessages.length > lastMsgCount && lastMsgCount > 0) {
+        showToast('New item received from PC!', 'success');
+        if (navigator.vibrate) try { navigator.vibrate(100); } catch(e) {}
+      }
+      lastMsgCount = receivedMessages.length;
+
+      if (receivedMessages.length === 0) {
+        container.innerHTML = '<div class="empty-state">No items received from PC yet.<br>Click "Send to Phone" on your PC to view text here.</div>';
+        return;
+      }
+
+      let html = '';
+      receivedMessages.forEach((item, idx) => {
+        const safeText = escapeHtml(item.text);
+        const hasLink = isUrl(item.text);
+        const safeUrl = hasLink ? encodeURI(item.text.trim()) : '';
+
+        html += '<div class="msg-card">' +
+          '<div class="msg-text">' + safeText + '</div>' +
+          '<div class="msg-footer">' +
+            '<span>' + formatRelative(item.timestamp) + '</span>' +
+            '<div class="msg-actions">' +
+              (hasLink ? '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" class="btn-micro btn-micro-link">Open ↗</a>' : '') +
+              '<button type="button" class="btn-micro" onclick="copyMessageText(' + idx + ', this)">📋 Copy</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      });
+
+      container.innerHTML = html;
+    }
+
     async function checkStatus() {
       if (!sessionToken) return;
       try {
@@ -291,6 +496,9 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
             approvalScreen.style.display = 'none';
             transferScreen.style.display = 'block';
             errorScreen.style.display = 'none';
+            if (data.messages) {
+              renderMessages(data.messages);
+            }
           } else if (data.status === 'pending') {
             setStatus('connecting', 'Pending Approval');
             approvalScreen.style.display = 'block';
@@ -335,6 +543,7 @@ const MOBILE_CLIENT_HTML = `<!DOCTYPE html>
             transferScreen.style.display = 'block';
             errorScreen.style.display = 'none';
             showToast('Paired with PC successfully!', 'success');
+            if (data.messages) renderMessages(data.messages);
           } else {
             setStatus('connecting', 'Pending Approval');
             approvalScreen.style.display = 'block';
@@ -463,6 +672,7 @@ export class BridgeServer {
     deviceInfo: string;
     pairedAt: number;
   } | null = null;
+  private outgoingMessages: BridgeMessage[] = [];
 
   // Rate limiting (max 30 sends per minute)
   private sendCounts: { count: number; resetTime: number } = { count: 0, resetTime: Date.now() + 60000 };
@@ -600,6 +810,7 @@ export class BridgeServer {
     this.activeSessionToken = '';
     this.pendingRequest = null;
     this.connectedDevice = null;
+    this.outgoingMessages = [];
   }
 
   public approvePairing(requestId: string): boolean {
@@ -631,8 +842,35 @@ export class BridgeServer {
     this.activeSessionToken = '';
     this.connectedDevice = null;
     this.pendingRequest = null;
+    this.outgoingMessages = [];
     this.generateNewPairingCredentials();
     this.emitStatus();
+  }
+
+  public sendToDevice(text: string): { success: boolean; id?: string; error?: string } {
+    if (!this.connectedDevice || !this.activeSessionToken) {
+      return { success: false, error: 'No phone connected or paired' };
+    }
+    if (typeof text !== 'string' || !text.trim()) {
+      return { success: false, error: 'Cannot send empty content' };
+    }
+    if (text.length > 65536) {
+      return { success: false, error: 'Content exceeds 64KB limit' };
+    }
+
+    const msg: BridgeMessage = {
+      id: crypto.randomBytes(6).toString('hex'),
+      text: text.trim(),
+      timestamp: Date.now()
+    };
+
+    this.outgoingMessages.unshift(msg);
+    if (this.outgoingMessages.length > 50) {
+      this.outgoingMessages.pop();
+    }
+
+    this.emitStatus();
+    return { success: true, id: msg.id };
   }
 
   public getStatus(): BridgeStatus {
@@ -649,7 +887,8 @@ export class BridgeServer {
       pairingUrl,
       pin: this.currentPin,
       connectedDevice: this.connectedDevice,
-      pendingRequest: this.pendingRequest
+      pendingRequest: this.pendingRequest,
+      outgoingCount: this.outgoingMessages.length
     };
   }
 
@@ -709,7 +948,8 @@ export class BridgeServer {
         res.end(JSON.stringify({
           status: 'connected',
           sessionToken: this.activeSessionToken,
-          device: this.connectedDevice
+          device: this.connectedDevice,
+          messages: this.outgoingMessages
         }));
         return;
       }
@@ -745,7 +985,8 @@ export class BridgeServer {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             status: 'connected',
-            sessionToken: this.activeSessionToken
+            sessionToken: this.activeSessionToken,
+            messages: this.outgoingMessages
           }));
           return;
         }
@@ -776,7 +1017,7 @@ export class BridgeServer {
       return;
     }
 
-    // 4. Send Content (Text/Link)
+    // 4. Send Content (Phone to PC)
     if (req.method === 'POST' && pathname === '/api/send') {
       const authHeader = req.headers['authorization'] || '';
       const token = authHeader.replace(/^Bearer\s+/i, '').trim();
@@ -819,7 +1060,41 @@ export class BridgeServer {
       return;
     }
 
-    // 5. Unpair Device
+    // 5. Get Messages (PC to Phone Outgoing List)
+    if (req.method === 'GET' && pathname === '/api/messages') {
+      const authHeader = req.headers['authorization'] || '';
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+      if (!this.activeSessionToken || (token !== this.activeSessionToken && token !== this.pairingSecret)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized or session expired' }));
+        return;
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ messages: this.outgoingMessages }));
+      return;
+    }
+
+    // 6. Clear Outgoing Messages
+    if (req.method === 'POST' && pathname === '/api/messages/clear') {
+      const authHeader = req.headers['authorization'] || '';
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+      if (!this.activeSessionToken || (token !== this.activeSessionToken && token !== this.pairingSecret)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized or session expired' }));
+        return;
+      }
+
+      this.outgoingMessages = [];
+      this.emitStatus();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+      return;
+    }
+
+    // 7. Unpair Device
     if (req.method === 'POST' && pathname === '/api/unpair') {
       this.unpairDevice();
       res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -125,6 +125,9 @@ if (!gotTheLock) {
       bridgeServer.generateNewPairingCredentials();
       return bridgeServer.getStatus();
     });
+    ipcMain.handle('bridge-send-to-phone', (_, text: string) => {
+      return bridgeServer.sendToDevice(text);
+    });
 
     createWindow();
   });
