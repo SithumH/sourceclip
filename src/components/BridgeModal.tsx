@@ -106,8 +106,9 @@ export function BridgeModal({
     if (!status?.pairingUrl) return '';
     try {
       const qr = new QRCode(status.pairingUrl, 'M');
-      return qr.toSvg(170, 3, '#0f172a', '#ffffff');
+      return qr.toSvg(210, 4, '#000000', '#ffffff');
     } catch (e) {
+      console.error('Failed to generate QR code:', e);
       return '';
     }
   }, [status?.pairingUrl]);
