@@ -1,0 +1,56 @@
+{
+  "name": "sourceclip",
+  "private": true,
+  "version": "1.0.0",
+  "main": "dist-electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && electron-builder",
+    "preview": "vite preview",
+    "test": "npx tsx tests/bridge.test.ts"
+  },
+  "build": {
+    "appId": "com.sourceclip.app",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "public/**/*"
+    ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "win": {
+      "icon": "public/logo.png",
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "displayLanguageSelector": true,
+      "multiLanguageInstaller": true
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^32.0.1",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.1",
+    "vite-plugin-electron": "^0.28.7",
+    "vite-plugin-electron-renderer": "^0.14.5"
+  }
+}
